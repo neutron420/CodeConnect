@@ -7,8 +7,6 @@ use sqlx::PgPool;
 use dotenv::dotenv;
 use std::env;
 use std::process::{Command, Stdio};
-use std::io::Write;
-use tempfile::NamedTempFile;
 use tokio::time::{timeout, Duration};
 use std::fs;
 
@@ -30,7 +28,7 @@ enum ExecutionStatus {
 #[derive(Deserialize)]
 struct CompileRequest {
     code: String,
-    language: String, // "rust", "python", "c", or "custom"
+    language: String, // "rust", "python", "c", "cpp", "javascript", "go", or "custom"
 }
 
 #[derive(Serialize)]
@@ -63,7 +61,10 @@ async fn compile_handler(req: web::Json<CompileRequest>, pool: web::Data<PgPool>
         "rust" => execute_rust_code(code).await,
         "python" => execute_python_code(code).await,
         "c" => execute_c_code(code).await,
-        _ => Err("Unsupported language. Use: custom, rust, python, or c".to_string()),
+        "cpp" | "c++" => execute_cpp_code(code).await,
+        "javascript" | "js" => execute_javascript_code(code).await,
+        "go" => execute_go_code(code).await,
+        _ => Err("Unsupported language. Use: custom, rust, python, c, cpp, javascript, or go".to_string()),
     };
 
     let execution_time = start_time.elapsed().as_millis() as u64;
@@ -318,6 +319,136 @@ async fn execute_c_code(code: &str) -> Result<String, String> {
     Ok(output.to_string())
 }
 
+// Execute C++ code
+async fn execute_cpp_code(code: &str) -> Result<String, String> {
+    let temp_dir = tempfile::tempdir()
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    
+    let cpp_file = temp_dir.path().join("main.cpp");
+    
+    fs::write(&cpp_file, code)
+        .map_err(|e| format!("Failed to write code: {}", e))?;
+    
+    let exe_file = if cfg!(target_os = "windows") {
+        temp_dir.path().join("main.exe")
+    } else {
+        temp_dir.path().join("main")
+    };
+    
+    let compile_output = timeout(EXECUTION_TIMEOUT, async {
+        Command::new("g++")
+            .arg(&cpp_file)
+            .arg("-o")
+            .arg(&exe_file)
+            .arg("-std=c++17")
+            .arg("-Wall")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+    })
+    .await
+    .map_err(|_| "Compilation timeout".to_string())?
+    .map_err(|e| format!("Compilation failed: {}", e))?;
+    
+    if !compile_output.status.success() {
+        return Err(format!("Compilation error: {}", 
+            String::from_utf8_lossy(&compile_output.stderr)));
+    }
+    
+    let run_output = timeout(EXECUTION_TIMEOUT, async {
+        Command::new(&exe_file)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+    })
+    .await
+    .map_err(|_| "Execution timeout".to_string())?
+    .map_err(|e| format!("Execution failed: {}", e))?;
+    
+    if !run_output.status.success() {
+        return Err(format!("Runtime error: {}", 
+            String::from_utf8_lossy(&run_output.stderr)));
+    }
+    
+    let output = String::from_utf8_lossy(&run_output.stdout);
+    if output.len() > MAX_OUTPUT_SIZE {
+        return Err("Output too large".to_string());
+    }
+    
+    Ok(output.to_string())
+}
+
+// Execute JavaScript code
+async fn execute_javascript_code(code: &str) -> Result<String, String> {
+    let output = timeout(EXECUTION_TIMEOUT, async {
+        Command::new("node")
+            .arg("-e")
+            .arg(code)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+    })
+    .await
+    .map_err(|_| "Execution timeout".to_string())?
+    .map_err(|e| format!("Failed to execute Node.js: {}", e))?;
+    
+    if !output.status.success() {
+        return Err(format!("Runtime error: {}", 
+            String::from_utf8_lossy(&output.stderr)));
+    }
+    
+    let result = String::from_utf8_lossy(&output.stdout);
+    if result.len() > MAX_OUTPUT_SIZE {
+        return Err("Output too large".to_string());
+    }
+    
+    Ok(result.to_string())
+}
+
+// Execute Go code
+async fn execute_go_code(code: &str) -> Result<String, String> {
+    let temp_dir = tempfile::tempdir()
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    
+    let go_file = temp_dir.path().join("main.go");
+    
+    // Ensure code has package main and func main
+    let wrapped_code = if !code.contains("package main") {
+        format!("package main\n\nimport \"fmt\"\n\nfunc main() {{\n{}\n}}", code)
+    } else {
+        code.to_string()
+    };
+    
+    fs::write(&go_file, wrapped_code)
+        .map_err(|e| format!("Failed to write code: {}", e))?;
+    
+    // We can run directly with 'go run', but compiling matches other flows better
+    // 'go run' is simpler for one-off execution though
+    let run_output = timeout(EXECUTION_TIMEOUT, async {
+        Command::new("go")
+            .arg("run")
+            .arg(&go_file)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+    })
+    .await
+    .map_err(|_| "Execution timeout".to_string())?
+    .map_err(|e| format!("Execution failed: {}", e))?;
+    
+    if !run_output.status.success() {
+        return Err(format!("Runtime error: {}", 
+            String::from_utf8_lossy(&run_output.stderr)));
+    }
+    
+    let output = String::from_utf8_lossy(&run_output.stdout);
+    if output.len() > MAX_OUTPUT_SIZE {
+        return Err("Output too large".to_string());
+    }
+    
+    Ok(output.to_string())
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -335,7 +466,7 @@ async fn main() -> std::io::Result<()> {
         .expect("PORT must be a valid number");
 
     println!("Multi-language compiler server starting on http://0.0.0.0:{}", port);
-    println!("Supported languages: custom, rust, python, c");
+    println!("Supported languages: custom, rust, python, c, cpp, javascript, go");
     
     HttpServer::new(move || {
         let cors = Cors::default()

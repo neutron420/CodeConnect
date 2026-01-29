@@ -9,11 +9,17 @@ import { OutputPanel } from "@/components/OutputPanel";
 
 import { Home, User, Briefcase, Play, Loader } from "lucide-react";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 const starterCode: Record<LanguageKey, string> = {
   custom: `// Welcome to the Custom Language!\nfn fibonacci(n) {\n  if (n <= 1) {\n    return n;\n  }\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nlet result = fibonacci(10);\nprintln("Fibonacci(10) is:", result);\n`,
   rust: `fn main() {\n    println!("Hello from Rust!");\n}`,
   python: `print("Hello from Python!")`,
   c: `#include <stdio.h>\n\nint main() {\n    printf("Hello from C!\\n");\n    return 0;\n}`,
+  cpp: `#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++!\\n";\n    return 0;\n}`,
+  javascript: `console.log("Hello from JavaScript!");`,
+  go: `package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello from Go!")\n}`,
 };
 
 export default function CompilerPage() {
@@ -40,7 +46,7 @@ export default function CompilerPage() {
     setExecutionTime(null);
 
     try {
-      const response = await fetch("http://localhost:8080/compile", {
+      const response = await fetch(`${API_BASE_URL}/compile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, language: selectedLanguage }),
@@ -49,7 +55,7 @@ export default function CompilerPage() {
       setOutput(result.result);
       setError(result.error);
       setExecutionTime(result.execution_time_ms);
-    } catch (err) {
+    } catch {
       setError("Failed to connect to the server.");
     } finally {
       setIsLoading(false);

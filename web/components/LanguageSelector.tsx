@@ -7,6 +7,9 @@ export const languageOptions = {
   rust: { name: "Rust", editorLanguage: "rust" },
   python: { name: "Python", editorLanguage: "python" },
   c: { name: "C", editorLanguage: "c" },
+  cpp: { name: "C++", editorLanguage: "cpp" },
+  javascript: { name: "JavaScript", editorLanguage: "javascript" },
+  go: { name: "Go", editorLanguage: "go" },
 };
 export type LanguageKey = keyof typeof languageOptions;
 
