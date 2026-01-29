@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.10.0",
     "@monaco-editor/react": "^4.7.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
@@ -17,7 +16,6 @@
     "monaco-editor": "^0.52.2",
     "motion": "^12.23.12",
     "next": "16.1.6",
-    "next-auth": "^5.0.0-beta.29",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-icons": "^5.5.0",
