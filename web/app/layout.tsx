@@ -1,19 +1,14 @@
 
-import { SessionProvider } from 'next-auth/react'
-import './globals.css'
+import "./globals.css";
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
-      </body>
+      <body>{children}</body>
     </html>
-  )
+  );
 }
