@@ -581,11 +581,11 @@ async fn main() -> std::io::Result<()> {
     let database_url = env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
 
-    // FIX: Proper connection pool configuration
+    // FIX: Proper connection pool configuration (30s timeout to allow Neon cold start to wake up)
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .min_connections(1)
-        .acquire_timeout(Duration::from_secs(5))
+        .acquire_timeout(Duration::from_secs(30))
         .idle_timeout(Duration::from_secs(300))
         .connect(&database_url)
         .await
