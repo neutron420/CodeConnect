@@ -1,5 +1,5 @@
 # ── Stage 1: Build the Rust backend ──
-FROM rust:1.80 AS builder
+FROM rust:1.85 AS builder
 
 RUN rustup target add x86_64-unknown-linux-musl
 
