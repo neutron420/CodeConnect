@@ -10,6 +10,7 @@ export const languageOptions = {
   cpp: { name: "C++", editorLanguage: "cpp" },
   javascript: { name: "JavaScript", editorLanguage: "javascript" },
   go: { name: "Go", editorLanguage: "go" },
+  java: { name: "Java", editorLanguage: "java" },
 };
 export type LanguageKey = keyof typeof languageOptions;
 

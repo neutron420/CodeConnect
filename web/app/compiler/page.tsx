@@ -17,9 +17,10 @@ const starterCode: Record<LanguageKey, string> = {
   rust: `fn main() {\n    println!("Hello from Rust!");\n}`,
   python: `print("Hello from Python!")`,
   c: `#include <stdio.h>\n\nint main() {\n    printf("Hello from C!\\n");\n    return 0;\n}`,
-  cpp: `#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++!\\n";\n    return 0;\n}`,
+  cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from C++!" << endl;\n    return 0;\n}`,
   javascript: `console.log("Hello from JavaScript!");`,
   go: `package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello from Go!")\n}`,
+  java: `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java!");\n    }\n}`,
 };
 
 export default function CompilerPage() {
@@ -29,6 +30,7 @@ export default function CompilerPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
+  const [stdinInput, setStdinInput] = useState<string>("");
 
   const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const langKey = event.target.value as LanguageKey;
@@ -49,7 +51,7 @@ export default function CompilerPage() {
       const response = await fetch(`${API_BASE_URL}/compile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, language: selectedLanguage }),
+        body: JSON.stringify({ code, language: selectedLanguage, input: stdinInput }),
       });
       const result = await response.json();
       setOutput(result.result);
@@ -99,7 +101,7 @@ export default function CompilerPage() {
                 <Editor
                   language={languageOptions[selectedLanguage].editorLanguage}
                   value={code}
-                  onChange={(value) => setCode(value || "")}
+                  onChange={(value: any) => setCode(value || "")}
                   theme="vs-light"
                   options={{ 
                     minimap: { enabled: false }, 
@@ -115,13 +117,31 @@ export default function CompilerPage() {
           </Panel>
           <PanelResizeHandle className="h-2 bg-gray-200 hover:bg-black transition-colors" />
           <Panel defaultSize={35} minSize={15}>
-            {/* --- Bottom Panel: Output --- */}
-            <OutputPanel 
-                output={output} 
-                error={error} 
-                executionTime={executionTime} 
-                isLoading={isLoading} 
-            />
+            {/* --- Bottom Panel: Input + Output --- */}
+            <div className="h-full flex flex-col">
+              {/* Stdin Input */}
+              <div className="flex-shrink-0 border-b border-gray-200">
+                <div className="flex items-center px-4 py-2 bg-gray-50">
+                  <span className="text-sm font-semibold text-gray-600 mr-3">Input (stdin):</span>
+                </div>
+                <textarea
+                  value={stdinInput}
+                  onChange={(e) => setStdinInput(e.target.value)}
+                  placeholder="Provide input for your program here (e.g. test cases)..."
+                  className="w-full px-4 py-2 text-sm font-mono bg-white text-gray-800 border-none resize-none focus:outline-none focus:ring-0"
+                  rows={3}
+                />
+              </div>
+              {/* Output */}
+              <div className="flex-grow overflow-auto">
+                <OutputPanel 
+                    output={output} 
+                    error={error} 
+                    executionTime={executionTime} 
+                    isLoading={isLoading} 
+                />
+              </div>
+            </div>
           </Panel>
         </PanelGroup>
       </main>

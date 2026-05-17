@@ -9,11 +9,28 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-    volumes:
-      - ./src:/usr/src/app/src
-      - ./Cargo.toml:/usr/src/app/Cargo.toml
-      - ./Cargo.lock:/usr/src/app/Cargo.lock
-      - /usr/src/app/target
+      - RUST_LOG=info
+      - PORT=8080
+    # tmpfs for fast temp file I/O (ramdisk)
+    tmpfs:
+      - /tmp/codeconnect:size=256M
+      - /dev/shm:size=256M
+    # Resource limits to prevent abuse
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build:
@@ -22,10 +39,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8080
-    volumes:
-      - ./web:/app
-      - /app/node_modules
-      - /app/.next
+    restart: unless-stopped

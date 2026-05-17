@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO executions (code, result, status) VALUES ($1, $2, $3)",
+  "query": "INSERT INTO executions (code, result, status, execution_time_ms, language) VALUES ($1, $2, $3, $4, $5)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -20,7 +20,9 @@
               ]
             }
           }
-        }
+        },
+        "Int4",
+        "Text"
       ]
     },
     "nullable": []

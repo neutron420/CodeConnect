@@ -178,7 +178,7 @@ enum ExecutionStatus {
   SUCCESS
   ERROR
   TIMEOUT
-  MEMORY_LIMIT      // Updated to match what your Rust code expects
+  MEMORY_LIMIT      
 }
 
 enum ErrorType {
