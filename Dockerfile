@@ -1,7 +1,7 @@
 # ── Stage 1: Build the Rust backend ──
 FROM rust:1.85 AS builder
 
-RUN rustup target add x86_64-unknown-linux-musl
+
 
 WORKDIR /usr/src/app
 
@@ -11,7 +11,7 @@ COPY Cargo.toml Cargo.lock ./
 # Create dummy main to cache dependencies
 RUN mkdir src && echo "fn main(){}" > src/main.rs
 ENV SQLX_OFFLINE=true
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cargo build --release
 RUN rm src/main.rs
 
 # Copy real source code
@@ -19,8 +19,8 @@ COPY ./src ./src
 COPY ./.sqlx ./.sqlx
 
 # Build the actual application
-RUN rm -f target/x86_64-unknown-linux-musl/release/deps/multi_lang_compiler*
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN rm -f target/release/deps/multi_lang_compiler*
+RUN cargo build --release
 
 
 # ── Stage 2: Production runtime with all language compilers ──
@@ -82,7 +82,7 @@ RUN node -e "console.log('ok')" 2>/dev/null || true
 RUN mkdir -p /tmp/codeconnect
 
 # Copy the compiled binary
-COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/multi-lang-compiler /usr/local/bin/
+COPY --from=builder /usr/src/app/target/release/multi-lang-compiler /usr/local/bin/
 
 # Environment
 ENV RUST_LOG=info
